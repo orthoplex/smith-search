@@ -16,15 +16,12 @@ int main(int argc, char *argv[]) {
 
     uint8_t dsum_cache[HALFBASE] = {0};
     for (uint32_t i = 0; i < HALFBASE; i++)
-        for (uint32_t tmp = i; tmp; tmp /= 10)
-            dsum_cache[i] += tmp % 10;
+        dsum_cache[i] = i % 10 + dsum_cache[i / 10];
 
     uint32_t n = atoi(argv[1]);
     uint64_t dsum = 0;
-
-    uint64_t binom[EXP / BASELOG + 1] = {0};
-    binom[0] = 1;
-    uint32_t len = 1;
+    uint64_t binom[(EXP - 1) / BASELOG + 1] = {1};
+    uint32_t len = 1, max_len = 1;
 
     for (uint32_t k = 0; k <= n; k++) {
         // update digital sum
@@ -33,14 +30,14 @@ int main(int argc, char *argv[]) {
 
         // multiply
         for (int i = 0; i < len; i++)
-            binom[i] *= 6 * (n - k); // assume 3 * (n - k) < 10^8
+            binom[i] *= 6 * (n - k); // assume the factor to be < 10^8
 
         // carry
         for (int i = 0; i < len - 1; i++) {
             binom[i + 1] += binom[i] / BASE;
             binom[i] %= BASE;
         }
-        if (binom[len - 1] > BASE) {
+        if (binom[len - 1] >= BASE) {
             binom[len] += binom[len - 1] / BASE;
             binom[len - 1] %= BASE;
             len++;
@@ -59,9 +56,13 @@ int main(int argc, char *argv[]) {
             binom[i] = rem / div;
             rem %= div;
         }
+
+        // update max_len
+        max_len += len > max_len;
     }
 
     printf("Digital sum of (6*10^%d+1)^%d: %ld\n", EXP, n, dsum);
+    printf("The largest term had %d digits.\n", max_len);
 
     if ((dsum - n * 7) % 7 == 0)
         printf("(6*10^%d+1)^%d*10^%ld is Smith.\n", EXP, n, (dsum - n * 7) / 7);
